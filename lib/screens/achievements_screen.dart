@@ -38,7 +38,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
   Future<void> _loadAchievements() async {
     setState(() => _isLoading = true);
     
-    // Get all achievements with their unlock status
     final allAchievements = AchievementService.getAllAchievements();
     final unlockedIds = await StorageService.getUnlockedAchievements();
     
@@ -59,7 +58,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
   @override
   Widget build(BuildContext context) {
     final totalStats = StatisticsService.getTotalStats();
-    final totalHours = totalStats['totalFocusHours'] as int;
+    final totalHours = (totalStats['totalFocusSeconds'] as int) / 3600;
     final unlockedCount = _achievements.where((a) => a.unlocked).length;
 
     return Scaffold(
@@ -69,7 +68,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
       ),
       body: Column(
         children: [
-          // Progress header
           Container(
             padding: const EdgeInsets.all(20),
             margin: const EdgeInsets.all(16),
@@ -122,7 +120,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
             ),
           ),
           
-          // Achievements grid
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -183,7 +180,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Icon
                 Container(
                   width: 56,
                   height: 56,
@@ -198,13 +194,12 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
                       achievement.icon,
                       style: TextStyle(
                         fontSize: isUnlocked ? 28 : 20,
-                        opacity: isUnlocked ? 1 : 0.3,
+                        color: isUnlocked ? Colors.black : Colors.grey.withOpacity(0.3),  // ✅ FIXED
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Title
                 Text(
                   achievement.title,
                   style: TextStyle(
@@ -215,7 +210,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 4),
-                // Description
                 Text(
                   achievement.description,
                   style: TextStyle(
@@ -227,7 +221,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
               ],
             ),
           ),
-          // Locked overlay
           if (!isUnlocked)
             Positioned(
               right: 8,
@@ -245,7 +238,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
                 ),
               ),
             ),
-          // Unlocked badge
           if (isUnlocked)
             Positioned(
               right: 8,
