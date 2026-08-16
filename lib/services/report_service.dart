@@ -10,13 +10,13 @@ class ReportService {
     final monthName = DateFormat('MMMM yyyy').format(now);
     final sessions = StorageService.getAllSessions();
     final monthSessions = sessions.where((s) {
-      return s.startTime.month == now.month &&
-             s.startTime.year == now.year &&
-             s.type == SessionType.focus &&
+      return s.startTime.month == now.month &&  // ✅ FIXED: DateTime
+             s.startTime.year == now.year &&    // ✅ FIXED: DateTime
+             s.type == 'focus' &&
              s.completed;
     }).toList();
 
-    final totalMinutes = monthSessions.fold<int>(0, (sum, s) => sum + s.durationSeconds ~/ 60);
+    final totalMinutes = monthSessions.fold<int>(0, (sum, s) => sum + s.durationMinutes);  // ✅ FIXED: durationMinutes
     final dailyAvg = monthSessions.isEmpty ? 0 : totalMinutes / 30;
     final streak = StatisticsService.getStreak();
     final subjects = _getSubjects(monthSessions);
@@ -35,8 +35,8 @@ class ReportService {
       },
       'details': {
         'sessions': monthSessions.map((s) => {
-          'date': DateFormat('yyyy-MM-dd').format(s.startTime),
-          'duration': s.durationSeconds ~/ 60,
+          'date': DateFormat('yyyy-MM-dd').format(s.startTime),  // ✅ FIXED: DateTime
+          'duration': s.durationMinutes,  // ✅ FIXED: durationMinutes
           'note': s.note ?? '',
           'subject': s.subject ?? '',
         }).toList(),
@@ -51,19 +51,19 @@ class ReportService {
     final year = now.year;
     final sessions = StorageService.getAllSessions();
     final yearSessions = sessions.where((s) {
-      return s.startTime.year == year &&
-             s.type == SessionType.focus &&
+      return s.startTime.year == year &&  // ✅ FIXED: DateTime
+             s.type == 'focus' &&
              s.completed;
     }).toList();
 
     final monthlyBreakdown = <String, int>{};
     for (int month = 1; month <= 12; month++) {
-      final monthSessions = yearSessions.where((s) => s.startTime.month == month).toList();
-      final totalMins = monthSessions.fold<int>(0, (sum, s) => sum + s.durationSeconds ~/ 60);
+      final monthSessions = yearSessions.where((s) => s.startTime.month == month).toList();  // ✅ FIXED: DateTime
+      final totalMins = monthSessions.fold<int>(0, (sum, s) => sum + s.durationMinutes);  // ✅ FIXED: durationMinutes
       monthlyBreakdown[DateFormat('MMM').format(DateTime(year, month))] = totalMins;
     }
 
-    final totalMinutes = yearSessions.fold<int>(0, (sum, s) => sum + s.durationSeconds ~/ 60);
+    final totalMinutes = yearSessions.fold<int>(0, (sum, s) => sum + s.durationMinutes);  // ✅ FIXED: durationMinutes
     final streak = StatisticsService.getStreak();
 
     final report = {
