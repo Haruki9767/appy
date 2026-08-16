@@ -26,7 +26,6 @@ class CircularTimer extends StatelessWidget {
       height: size,
       child: CustomPaint(
         painter: _TimerPainter(
-          // FIX: clamp progress here too as a safety net
           progress: progress.clamp(0.0, 1.0),
           gradient: _gradient(),
         ),
@@ -58,7 +57,7 @@ class CircularTimer extends StatelessWidget {
             height: 10,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: filled ? AppTheme.focusRed : AppTheme.textSecondary.withValues(alpha: 0.25),
+              color: filled ? AppTheme.focusRed : AppTheme.textSecondary.withOpacity(0.25),
             ),
           ),
         );
@@ -66,17 +65,59 @@ class CircularTimer extends StatelessWidget {
     );
   }
 
-  LinearGradient _gradient() => switch (sessionType) {
-    SessionType.focus      => AppTheme.getFocusGradient(),
-    SessionType.shortBreak => AppTheme.getBreakGradient(),
-    SessionType.longBreak  => AppTheme.getLongBreakGradient(),
-  };
+  LinearGradient _gradient() {
+    switch (sessionType) {
+      case SessionType.focus:
+        return AppTheme.getFocusGradient();
+      case SessionType.shortBreak:
+        return AppTheme.getBreakGradient();
+      case SessionType.longBreak:
+        return AppTheme.getLongBreakGradient();
+      case SessionType.stopwatch:
+        return const LinearGradient(
+          colors: [Color(0xFFF59E0B), Color(0xFFFBBF24)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case SessionType.countdown:
+        return const LinearGradient(
+          colors: [Color(0xFFEF4444), Color(0xFFF87171)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case SessionType.candle:
+        return const LinearGradient(
+          colors: [Color(0xFFFF9F1C), Color(0xFFFFB347)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case SessionType.ice:
+        return const LinearGradient(
+          colors: [Color(0xFF4FC3F7), Color(0xFF81D4FA)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+    }
+  }
 
-  Color _color() => switch (sessionType) {
-    SessionType.focus      => AppTheme.focusRed,
-    SessionType.shortBreak => AppTheme.breakGreen,
-    SessionType.longBreak  => AppTheme.longBreakPurple,
-  };
+  Color _color() {
+    switch (sessionType) {
+      case SessionType.focus:
+        return AppTheme.focusRed;
+      case SessionType.shortBreak:
+        return AppTheme.breakGreen;
+      case SessionType.longBreak:
+        return AppTheme.longBreakPurple;
+      case SessionType.stopwatch:
+        return const Color(0xFFF59E0B);
+      case SessionType.countdown:
+        return const Color(0xFFEF4444);
+      case SessionType.candle:
+        return const Color(0xFFFF9F1C);
+      case SessionType.ice:
+        return const Color(0xFF4FC3F7);
+    }
+  }
 }
 
 class _TimerPainter extends CustomPainter {
@@ -91,14 +132,12 @@ class _TimerPainter extends CustomPainter {
     final radius = size.width / 2 - 20;
     const sw = 12.0;
 
-    // Background track
     canvas.drawCircle(center, radius, Paint()
-      ..color = Colors.grey.withValues(alpha: 0.1)
+      ..color = Colors.grey.withOpacity(0.1)
       ..style = PaintingStyle.stroke
       ..strokeWidth = sw
       ..strokeCap = StrokeCap.round);
 
-    // Progress arc
     if (progress > 0) {
       final rect = Rect.fromCircle(center: center, radius: radius);
       canvas.drawArc(
@@ -116,7 +155,6 @@ class _TimerPainter extends CustomPainter {
   }
 
   @override
-  // FIX: also repaint when gradient changes (e.g. switching session type)
   bool shouldRepaint(_TimerPainter old) =>
       old.progress != progress || old.gradient != gradient;
 }
