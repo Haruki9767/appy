@@ -22,6 +22,9 @@ class PomodoroSession extends HiveObject {
   @HiveField(5)
   final int durationSeconds;
 
+  @HiveField(6)
+  final String? note;
+
   PomodoroSession({
     required this.id,
     required this.startTime,
@@ -29,9 +32,14 @@ class PomodoroSession extends HiveObject {
     required this.type,
     required this.completed,
     required this.durationSeconds,
+    this.note,
   });
 
+  // Computed — don't rely on stored durationSeconds for elapsed time
   Duration get duration => Duration(seconds: durationSeconds);
+
+  // Consistency helper
+  bool get isConsistent => completed == (endTime != null);
 }
 
 @HiveType(typeId: 1)
@@ -47,7 +55,8 @@ enum SessionType {
 }
 
 extension SessionTypeExtension on SessionType {
-  String get name {
+  // Renamed from 'name' to avoid shadowing Dart's built-in enum .name getter
+  String get displayName {
     switch (this) {
       case SessionType.focus:
         return 'Focus';
@@ -65,18 +74,18 @@ extension SessionTypeExtension on SessionType {
       case SessionType.shortBreak:
         return '☕';
       case SessionType.longBreak:
-        return '🎯';
+        return '🌿'; // Fixed: was 🎯 which looks like another focus icon
     }
   }
 
   int get defaultDuration {
     switch (this) {
       case SessionType.focus:
-        return 25 * 60; // 25 minutes
+        return 25 * 60;
       case SessionType.shortBreak:
-        return 5 * 60; // 5 minutes
+        return 5 * 60;
       case SessionType.longBreak:
-        return 15 * 60; // 15 minutes
+        return 15 * 60;
     }
   }
 }
