@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch: # lets you trigger it manually from GitHub
+  workflow_dispatch:
 
 jobs:
   build:
@@ -24,8 +24,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.0'  # ✅ Use exact version OR
-          # flutter-version: 'stable'  # ✅ Or use channel
+          flutter-version: 'stable'  # ✅ Use stable channel
           channel: stable
           cache: true
 
