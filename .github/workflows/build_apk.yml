@@ -24,14 +24,14 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 'stable'
+          flutter-version: '3.27.0'  # ✅ Use explicit version
           channel: stable
           cache: true
 
-      - name: Clean Flutter cache 
+      - name: Clean everything
         run: |
           flutter clean
-          rm -rf ~/.pub-cache
+          rm -f pubspec.lock
 
       - name: Install dependencies
         run: flutter pub get
