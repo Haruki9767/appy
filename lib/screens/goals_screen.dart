@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../services/storage_service.dart';
 import '../services/statistics_service.dart';
@@ -27,15 +26,18 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   Future<void> _loadData() async {
-    final settings = await StorageService.getSettings();
+    final dailyGoal = await StorageService.getGoal('dailyGoal', 2);
+    final weeklyGoal = await StorageService.getGoal('weeklyGoal', 10);
+    final monthlyGoal = await StorageService.getGoal('monthlyGoal', 40);
+    
     final stats = StatisticsService.getTotalStats();
     final weekStats = StatisticsService.getWeekStats();
     final monthStats = StatisticsService.getMonthStats();
 
     setState(() {
-      _dailyGoal = settings['dailyGoal'] ?? 2;
-      _weeklyGoal = settings['weeklyGoal'] ?? 10;
-      _monthlyGoal = settings['monthlyGoal'] ?? 40;
+      _dailyGoal = dailyGoal;
+      _weeklyGoal = weeklyGoal;
+      _monthlyGoal = monthlyGoal;
       _dailyMinutes = stats['todayFocusMinutes'] ?? 0;
       _weeklyMinutes = weekStats['totalFocusMinutes'] ?? 0;
       _monthlyMinutes = monthStats['totalFocusMinutes'] ?? 0;
@@ -43,7 +45,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   Future<void> _updateGoal(String key, int value) async {
-    await StorageService.setSetting(key, value);
+    await StorageService.setGoal(key, value);
     _loadData();
   }
 
@@ -58,7 +60,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Daily Goal
             _buildGoalCard(
               title: 'Daily Goal',
               icon: Icons.today,
@@ -70,7 +71,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
             ),
             const SizedBox(height: 16),
             
-            // Weekly Goal
             _buildGoalCard(
               title: 'Weekly Goal',
               icon: Icons.weekend,
@@ -82,7 +82,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
             ),
             const SizedBox(height: 16),
             
-            // Monthly Goal
             _buildGoalCard(
               title: 'Monthly Goal',
               icon: Icons.calendar_month,
@@ -94,7 +93,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
             ),
             const SizedBox(height: 24),
             
-            // Progress Summary
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
