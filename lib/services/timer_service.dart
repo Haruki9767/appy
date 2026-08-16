@@ -10,10 +10,9 @@ class TimerService extends ChangeNotifier {
   int _remainingSeconds = SessionType.focus.defaultDuration;
   int _totalSeconds = SessionType.focus.defaultDuration;
   int _completedPomodoros = 0;
-  DateTime? _sessionStartTime; // FIX: track actual start time
+  DateTime? _sessionStartTime;
   Timer? _timer;
 
-  // Getters
   TimerState get state => _state;
   SessionType get currentType => _currentType;
   int get remainingSeconds => _remainingSeconds;
@@ -21,7 +20,6 @@ class TimerService extends ChangeNotifier {
   int get completedPomodoros => _completedPomodoros;
   DateTime? get sessionStartTime => _sessionStartTime;
 
-  // FIX: clamp to [0,1] to prevent NaN/Infinity crashing CircularTimer
   double get progress =>
       _totalSeconds == 0 ? 0.0 : (1 - (_remainingSeconds / _totalSeconds)).clamp(0.0, 1.0);
 
@@ -37,9 +35,8 @@ class TimerService extends ChangeNotifier {
 
   void start() {
     if (_state == TimerState.running) return;
-    // FIX: always cancel existing timer before creating a new one
     _timer?.cancel();
-    _sessionStartTime ??= DateTime.now(); // only set if not already set (resume case)
+    _sessionStartTime ??= DateTime.now();
     _state = TimerState.running;
     notifyListeners();
 
@@ -62,7 +59,6 @@ class TimerService extends ChangeNotifier {
 
   void resume() {
     if (_state != TimerState.paused) return;
-    // FIX: don't reset _sessionStartTime on resume
     start();
   }
 
@@ -77,12 +73,9 @@ class TimerService extends ChangeNotifier {
   void _complete() {
     _timer?.cancel();
     _state = TimerState.completed;
-    // NOTE: do NOT increment here — caller (TimerScreen) saves then calls continueToNext
-    // which calls _nextSession, which increments. Keeps count in sync with skip().
     notifyListeners();
   }
 
-  // FIX: skip now increments pomodoro count consistently with _complete path
   void skip() {
     _timer?.cancel();
     if (_currentType == SessionType.focus) {
@@ -120,7 +113,6 @@ class TimerService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Called from TimerScreen after saving the completed session
   void continueToNext() {
     if (_currentType == SessionType.focus) {
       _completedPomodoros++;
@@ -128,7 +120,6 @@ class TimerService extends ChangeNotifier {
     _nextSession();
   }
 
-  // FIX: call this on app start to reset daily count if date has changed
   void resetDailyStatsIfNeeded(String lastResetDate) {
     final today =
         '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}';
