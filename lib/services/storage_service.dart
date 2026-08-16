@@ -43,13 +43,6 @@ class StorageService {
       if (!Hive.isAdapterRegistered(1)) {
         Hive.registerAdapter(SessionTypeAdapter());
       }
-      // Register Project adapters if you have them
-      // if (!Hive.isAdapterRegistered(2)) {
-      //   Hive.registerAdapter(ProjectAdapter());
-      // }
-      // if (!Hive.isAdapterRegistered(3)) {
-      //   Hive.registerAdapter(AchievementAdapter());
-      // }
 
       _sessionsBox = await Hive.openBox<PomodoroSession>(_sessionsBoxName);
       _projectsBox = await Hive.openBox<Project>(_projectsBoxName);
@@ -73,13 +66,14 @@ class StorageService {
   static List<PomodoroSession> getTodaySessions() {
     final today = _dateKey(DateTime.now());
     return _box.values
-        .where((s) => _dateKey(s.startTime) == today)
+        .where((s) => _dateKey(DateTime.parse(s.startTime)) == today)
         .toList();
   }
 
   static List<PomodoroSession> getSessionsInRange(DateTime start, DateTime end) {
     return _box.values.where((s) {
-      return !s.startTime.isBefore(start) && s.startTime.isBefore(end);
+      final sessionDate = DateTime.parse(s.startTime);
+      return !sessionDate.isBefore(start) && sessionDate.isBefore(end);
     }).toList();
   }
 
@@ -106,20 +100,6 @@ class StorageService {
   }
 
   // ── Achievements ──────────────────────────────────────────────────────────
-
-  static Future<void> saveAchievement(Achievement achievement) async {
-    await _achievementsBox?.put(achievement.id, achievement);
-  }
-
-  static List<Achievement> getAllAchievements() {
-    return _achievementsBox?.values.toList() ?? [];
-  }
-
-  static Future<void> saveAchievements(List<Achievement> achievements) async {
-    for (final achievement in achievements) {
-      await _achievementsBox?.put(achievement.id, achievement);
-    }
-  }
 
   static Future<List<String>> getUnlockedAchievements() async {
     return _p.getStringList(_achievementsKey) ?? [];
@@ -176,6 +156,20 @@ class StorageService {
       // Key exists but wrong type — return default
     }
     return defaultValue;
+  }
+
+  static Future<Map<String, dynamic>> getSettings() async {
+    return {
+      'dailyGoal': _p.getInt('dailyGoal') ?? 2,
+      'weeklyGoal': _p.getInt('weeklyGoal') ?? 10,
+      'monthlyGoal': _p.getInt('monthlyGoal') ?? 40,
+      'focusDuration': _p.getInt('focusDuration') ?? 25,
+      'shortBreak': _p.getInt('shortBreak') ?? 5,
+      'longBreak': _p.getInt('longBreak') ?? 15,
+      'autoStartBreaks': _p.getBool('autoStartBreaks') ?? false,
+      'autoStartFocus': _p.getBool('autoStartFocus') ?? false,
+      'soundEnabled': _p.getBool('soundEnabled') ?? true,
+    };
   }
 
   // ── Goals ─────────────────────────────────────────────────────────────────
