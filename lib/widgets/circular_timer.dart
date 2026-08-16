@@ -20,46 +20,25 @@ class CircularTimer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size.width * 0.7;
-    final gradient = _getGradient();
 
-    return Container(
+    return SizedBox(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: _getMainColor().withValues(alpha: 0.15),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-            spreadRadius: 5,
-          ),
-          BoxShadow(
-            color: Colors.white.withValues(alpha: 0.9),
-            blurRadius: 20,
-            offset: const Offset(-10, -10),
-          ),
-        ],
-      ),
       child: CustomPaint(
-        painter: CircularTimerPainter(
-          progress: progress,
-          gradient: gradient,
+        painter: _TimerPainter(
+          // FIX: clamp progress here too as a safety net
+          progress: progress.clamp(0.0, 1.0),
+          gradient: _gradient(),
         ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                timeText,
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      color: _getMainColor(),
-                    ),
-              ),
-              const SizedBox(height: 16),
+              Text(timeText,
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(color: _color())),
+              const SizedBox(height: 12),
               if (sessionType == SessionType.focus)
-                _buildPomodoroIndicators(),
+                _pomodoroIndicators(),
             ],
           ),
         ),
@@ -67,19 +46,19 @@ class CircularTimer extends StatelessWidget {
     );
   }
 
-  Widget _buildPomodoroIndicators() {
+  Widget _pomodoroIndicators() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(4, (index) {
-        final isCompleted = index < (completedPomodoros % 4);
+      children: List.generate(4, (i) {
+        final filled = i < (completedPomodoros % 4);
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Container(
-            width: 12,
-            height: 12,
+            width: 10,
+            height: 10,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isCompleted ? AppTheme.focusRed : AppTheme.textSecondary.withValues(alpha: 0.3),
+              color: filled ? AppTheme.focusRed : AppTheme.textSecondary.withValues(alpha: 0.25),
             ),
           ),
         );
@@ -87,76 +66,57 @@ class CircularTimer extends StatelessWidget {
     );
   }
 
-  LinearGradient _getGradient() {
-    switch (sessionType) {
-      case SessionType.focus:
-        return AppTheme.getFocusGradient();
-      case SessionType.shortBreak:
-        return AppTheme.getBreakGradient();
-      case SessionType.longBreak:
-        return AppTheme.getLongBreakGradient();
-    }
-  }
+  LinearGradient _gradient() => switch (sessionType) {
+    SessionType.focus      => AppTheme.getFocusGradient(),
+    SessionType.shortBreak => AppTheme.getBreakGradient(),
+    SessionType.longBreak  => AppTheme.getLongBreakGradient(),
+  };
 
-  Color _getMainColor() {
-    switch (sessionType) {
-      case SessionType.focus:
-        return AppTheme.focusRed;
-      case SessionType.shortBreak:
-        return AppTheme.breakGreen;
-      case SessionType.longBreak:
-        return AppTheme.longBreakPurple;
-    }
-  }
+  Color _color() => switch (sessionType) {
+    SessionType.focus      => AppTheme.focusRed,
+    SessionType.shortBreak => AppTheme.breakGreen,
+    SessionType.longBreak  => AppTheme.longBreakPurple,
+  };
 }
 
-class CircularTimerPainter extends CustomPainter {
+class _TimerPainter extends CustomPainter {
   final double progress;
   final LinearGradient gradient;
 
-  CircularTimerPainter({
-    required this.progress,
-    required this.gradient,
-  });
+  const _TimerPainter({ required this.progress, required this.gradient });
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 20;
+    const sw = 12.0;
 
-    // Draw background circle
-    final bgPaint = Paint()
+    // Background track
+    canvas.drawCircle(center, radius, Paint()
       ..color = Colors.grey.withValues(alpha: 0.1)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 12
-      ..strokeCap = StrokeCap.round;
+      ..strokeWidth = sw
+      ..strokeCap = StrokeCap.round);
 
-    canvas.drawCircle(center, radius, bgPaint);
-
-    // Draw progress arc
+    // Progress arc
     if (progress > 0) {
       final rect = Rect.fromCircle(center: center, radius: radius);
-      final progressPaint = Paint()
-        ..shader = gradient.createShader(rect)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 12
-        ..strokeCap = StrokeCap.round;
-
-      const startAngle = -math.pi / 2;
-      final sweepAngle = 2 * math.pi * progress;
-
       canvas.drawArc(
         rect,
-        startAngle,
-        sweepAngle,
+        -math.pi / 2,
+        2 * math.pi * progress,
         false,
-        progressPaint,
+        Paint()
+          ..shader = gradient.createShader(rect)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = sw
+          ..strokeCap = StrokeCap.round,
       );
     }
   }
 
   @override
-  bool shouldRepaint(CircularTimerPainter oldDelegate) {
-    return oldDelegate.progress != progress;
-  }
+  // FIX: also repaint when gradient changes (e.g. switching session type)
+  bool shouldRepaint(_TimerPainter old) =>
+      old.progress != progress || old.gradient != gradient;
 }
