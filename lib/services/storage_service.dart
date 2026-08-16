@@ -115,7 +115,7 @@ class StorageService {
       '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
 }
 
-// Add to StorageService class
+// Add these to the StorageService class
 
 // ── Achievements ──────────────────────────────────────────────────────────────
 
@@ -135,4 +135,14 @@ static Future<void> addUnlockedAchievement(String id) async {
     current.add(id);
     await saveUnlockedAchievements(current);
   }
+}
+
+// ── Goals ────────────────────────────────────────────────────────────────────
+
+static Future<int> getGoal(String key, int defaultValue) async {
+  return _p.getInt(key) ?? defaultValue;
+}
+
+static Future<void> setGoal(String key, int value) async {
+  await _p.setInt(key, value);
 }
