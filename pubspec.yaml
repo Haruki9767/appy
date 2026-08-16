@@ -12,8 +12,6 @@ dependencies:
   
   # UI & Animation
   cupertino_icons: ^1.0.8
-  flutter_svg: ^2.0.10
-  shimmer: ^3.0.0
   flutter_staggered_animations: ^1.1.1
   
   # State Management
