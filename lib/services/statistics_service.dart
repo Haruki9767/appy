@@ -42,17 +42,17 @@ class StatisticsService {
   static Map<String, dynamic> getTotalStats() {
     final sessions = StorageService.getAllSessions();
     final summary = _summarize(sessions);
-    final totalSecs = (summary['totalFocusSeconds'] as int);
-    summary['totalFocusHours'] = (totalSecs / 3600);
+    final totalMin = (summary['totalFocusMinutes'] as int);
+    summary['totalFocusHours'] = (totalMin / 60);
     return summary;
   }
 
   static int getStreak() {
     final sessions = StorageService.getAllSessions();
-    final focusSessions = sessions.where((s) => s.type == SessionType.focus && s.completed).toList();
+    final focusSessions = sessions.where((s) => s.type == 'focus' && s.completed).toList();
     if (focusSessions.isEmpty) return 0;
     
-    final days = focusSessions.map((s) => _dateKey(s.startTime)).toSet().toList();
+    final days = focusSessions.map((s) => _dateKey(s.startTime)).toSet().toList();  // ✅ FIXED: DateTime
     days.sort((a, b) => b.compareTo(a));
     
     if (days.isEmpty) return 0;
@@ -79,8 +79,8 @@ class StatisticsService {
     final sessions = StorageService.getAllSessions();
     final now = DateTime.now();
     return sessions
-        .where((s) => s.startTime.year == now.year && s.type == SessionType.focus && s.completed)
-        .fold<int>(0, (sum, s) => sum + (s.durationSeconds ~/ 60));
+        .where((s) => s.startTime.year == now.year && s.type == 'focus' && s.completed)  // ✅ FIXED: DateTime
+        .fold<int>(0, (sum, s) => sum + s.durationMinutes);  // ✅ FIXED: durationMinutes
   }
 
   static List<Map<String, dynamic>> getLast7DaysData() {
@@ -91,11 +91,11 @@ class StatisticsService {
       final dayEnd = dayStart.add(const Duration(days: 1));
       final sessions = StorageService.getSessionsInRange(dayStart, dayEnd);
       final focusCount = sessions
-          .where((s) => s.type == SessionType.focus && s.completed)
+          .where((s) => s.type == 'focus' && s.completed)
           .length;
       final totalMins = sessions
-          .where((s) => s.type == SessionType.focus && s.completed)
-          .fold<int>(0, (sum, s) => sum + (s.durationSeconds ~/ 60));
+          .where((s) => s.type == 'focus' && s.completed)
+          .fold<int>(0, (sum, s) => sum + s.durationMinutes);  // ✅ FIXED: durationMinutes
       return {
         'date': date,
         'dayName': _dayName(date.weekday),
@@ -106,14 +106,14 @@ class StatisticsService {
   }
 
   static Map<String, dynamic> _summarize(List<PomodoroSession> sessions) {
-    int focusCount = 0, focusSecs = 0, breakCount = 0, totalCompleted = 0;
+    int focusCount = 0, focusMin = 0, breakCount = 0, totalCompleted = 0;
 
     for (final s in sessions) {
       if (!s.completed) continue;
       totalCompleted++;
-      if (s.type == SessionType.focus) {
+      if (s.type == 'focus') {
         focusCount++;
-        focusSecs += s.durationSeconds;
+        focusMin += s.durationMinutes;  // ✅ FIXED: durationMinutes
       } else {
         breakCount++;
       }
@@ -121,11 +121,11 @@ class StatisticsService {
 
     return {
       'focusSessions': focusCount,
-      'totalFocusMinutes': (focusSecs / 60).round(),
-      'totalFocusSeconds': focusSecs,
+      'totalFocusMinutes': focusMin,
+      'totalFocusSeconds': focusMin * 60,
       'breakSessions': breakCount,
       'totalSessions': totalCompleted,
-      'todayFocusMinutes': (focusSecs / 60).round(),
+      'todayFocusMinutes': focusMin,
     };
   }
 
@@ -134,6 +134,6 @@ class StatisticsService {
     return days[(weekday - 1).clamp(0, 6)];
   }
 
-  static String _dateKey(DateTime dt) =>
+  static String _dateKey(DateTime dt) =>  // ✅ CHANGED: accepts DateTime
       '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
 }
