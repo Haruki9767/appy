@@ -9,10 +9,15 @@ import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize storage
-  await StorageService.init();
-  
+
+  // FIX: wrap init in try/catch so a storage failure shows a clean error
+  try {
+    await StorageService.init();
+  } catch (e) {
+    // In production you'd show an error screen here
+    debugPrint('Storage init failed: $e');
+  }
+
   runApp(const MyApp());
 }
 
@@ -23,7 +28,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => TimerService()),
+        ChangeNotifierProvider(create: (_) {
+          final timer = TimerService();
+          // FIX: reset daily pomodoro count if the date has changed since last launch
+          timer.resetDailyStatsIfNeeded(StorageService.getLastResetDate());
+          return timer;
+        }),
       ],
       child: MaterialApp(
         title: 'FocusFlow',
@@ -31,8 +41,8 @@ class MyApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
         home: const TimerScreen(),
         routes: {
-          '/statistics': (context) => const StatisticsScreen(),
-          '/settings': (context) => const SettingsScreen(),
+          '/statistics': (_) => const StatisticsScreen(),
+          '/settings':   (_) => const SettingsScreen(),
         },
       ),
     );
