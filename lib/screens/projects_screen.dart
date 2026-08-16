@@ -594,4 +594,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       case 'test':
         return Icons.quiz;
       default:
-        return Icons.folder
+        return Icons.folder;
+    }
+  }
+}  // ✅ THIS CLOSES THE CLASS PROPERLY
