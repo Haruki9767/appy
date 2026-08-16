@@ -24,18 +24,18 @@ class PomodoroSession {
   final String? note;
   
   @HiveField(6)
-  final String startTime;
+  final DateTime startTime;  // ✅ CHANGED: String to DateTime
   
   @HiveField(7)
-  final String? endTime;
+  final DateTime? endTime;   // ✅ CHANGED: String? to DateTime?
   
-  @HiveField(8)  // ✅ ADD THIS
+  @HiveField(8)
   final String? subject;
   
-  @HiveField(9)  // ✅ ADD THIS
+  @HiveField(9)
   final List<String> tags;
   
-  @HiveField(10)  // ✅ ADD THIS
+  @HiveField(10)
   final String? projectId;
 
   PomodoroSession({
@@ -107,6 +107,25 @@ extension SessionTypeExtension on SessionType {
         return '🕯️';
       case SessionType.ice:
         return '🧊';
+    }
+  }
+
+  String get color {
+    switch (this) {
+      case SessionType.focus:
+        return '#FF6B6B';
+      case SessionType.shortBreak:
+        return '#4ECDC4';
+      case SessionType.longBreak:
+        return '#A78BFA';
+      case SessionType.stopwatch:
+        return '#F59E0B';
+      case SessionType.countdown:
+        return '#EF4444';
+      case SessionType.candle:
+        return '#FF9F1C';
+      case SessionType.ice:
+        return '#4FC3F7';
     }
   }
 
