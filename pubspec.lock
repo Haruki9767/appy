@@ -414,5 +414,4 @@ packages:
     source: hosted
     version: "1.1.0"
 sdks:
-  dart: ">=3.9.2 <4.0.0"
-  flutter: ">=3.35.0"
+  dart: ">=3.4.0 <4.0.0"  # This will be overwritten!
