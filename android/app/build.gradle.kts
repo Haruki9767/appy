@@ -17,9 +17,9 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.example.flutter_app"
+    namespace = "com.l1mefocus.app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.12077973"  // ✅ Fixed: ndkVersion set correctly
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -31,10 +31,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // TODO: Specify your own unique Application ID
         applicationId = "com.example.flutter_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -54,8 +52,6 @@ android {
 
     buildTypes {
         release {
-            // Use release signing when key.properties/keystore are present (local or CI),
-            // otherwise fall back to debug signing so `flutter run --release` still works.
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")
             } else {
