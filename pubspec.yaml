@@ -4,12 +4,11 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.4.0 <4.0.0"  # ✅ Changed from ^3.9.2 to a valid range
+  sdk: ">=3.4.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-
   cupertino_icons: ^1.0.8
   provider: 6.1.5+1
   shared_preferences: 2.5.3
