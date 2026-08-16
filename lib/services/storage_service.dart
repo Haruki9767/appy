@@ -114,3 +114,25 @@ class StorageService {
   static String _dateKey(DateTime dt) =>
       '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
 }
+
+// Add to StorageService class
+
+// ── Achievements ──────────────────────────────────────────────────────────────
+
+static const String _achievementsKey = 'unlocked_achievements';
+
+static Future<List<String>> getUnlockedAchievements() async {
+  return _p.getStringList(_achievementsKey) ?? [];
+}
+
+static Future<void> saveUnlockedAchievements(List<String> achievements) async {
+  await _p.setStringList(_achievementsKey, achievements);
+}
+
+static Future<void> addUnlockedAchievement(String id) async {
+  final current = await getUnlockedAchievements();
+  if (!current.contains(id)) {
+    current.add(id);
+    await saveUnlockedAchievements(current);
+  }
+}
