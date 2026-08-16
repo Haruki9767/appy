@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 import '../services/storage_service.dart';
 import '../services/project_service.dart';
 import '../theme/app_theme.dart';
@@ -49,7 +48,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       ),
       body: Column(
         children: [
-          // Filter chips
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: SingleChildScrollView(
@@ -65,7 +63,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             ),
           ),
           
-          // Project list
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -131,26 +128,15 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     final statusText = _getStatusText(project.status);
     final priorityColor = _getPriorityColor(project.priority);
 
-    return Slidable(
-      endActionPane: ActionPane(
-        motion: const ScrollMotion(),
-        children: [
-          SlidableAction(
-            onPressed: (_) => _editProject(project),
-            backgroundColor: AppTheme.focusRed,
-            foregroundColor: Colors.white,
-            icon: Icons.edit,
-            label: 'Edit',
-          ),
-          SlidableAction(
-            onPressed: (_) => _deleteProject(project.id),
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-            icon: Icons.delete,
-            label: 'Delete',
-          ),
-        ],
+    return Dismissible(
+      key: Key(project.id),
+      background: Container(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        child: const Icon(Icons.delete, color: Colors.white),
       ),
+      onDismissed: (_) => _deleteProject(project.id),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
@@ -298,6 +284,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 ),
               ],
             ),
+            Align(
+              alignment: Alignment.bottomRight,
+              child: IconButton(
+                icon: const Icon(Icons.edit, size: 20),
+                onPressed: () => _editProject(project),
+                color: AppTheme.textSecondary,
+              ),
+            ),
           ],
         ),
       ),
@@ -309,11 +303,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     final isEditing = project != null;
     final titleController = TextEditingController(text: project?.title ?? '');
     final descriptionController = TextEditingController(text: project?.description ?? '');
-    final type = project?.type ?? 'project';
-    final status = project?.status ?? 'notstarted';
-    final priority = project?.priority ?? 'medium';
-    final subject = project?.subject ?? '';
-    final deadline = project?.deadline ?? '';
     final notesController = TextEditingController(text: project?.notes ?? '');
 
     await showModalBottomSheet(
@@ -329,11 +318,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         expand: false,
         builder: (context, scrollController) => StatefulBuilder(
           builder: (context, setModalState) {
-            String selectedType = type;
-            String selectedStatus = status;
-            String selectedPriority = priority;
-            String selectedSubject = subject;
-            String selectedDeadline = deadline;
+            String selectedType = project?.type ?? 'project';
+            String selectedStatus = project?.status ?? 'notstarted';
+            String selectedPriority = project?.priority ?? 'medium';
+            String selectedSubject = project?.subject ?? '';
+            String selectedDeadline = project?.deadline ?? '';
 
             return SingleChildScrollView(
               controller: scrollController,
@@ -354,7 +343,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     ),
                     const SizedBox(height: 16),
                     
-                    // Type dropdown
                     _buildDropdown(
                       label: 'Type',
                       value: selectedType,
@@ -362,7 +350,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                       onChanged: (v) => setModalState(() => selectedType = v!),
                     ),
                     
-                    // Title
                     TextFormField(
                       controller: titleController,
                       decoration: const InputDecoration(
@@ -373,7 +360,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     ),
                     const SizedBox(height: 12),
                     
-                    // Description
                     TextFormField(
                       controller: descriptionController,
                       decoration: const InputDecoration(
@@ -384,7 +370,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     ),
                     const SizedBox(height: 12),
                     
-                    // Subject
                     _buildDropdown(
                       label: 'Subject',
                       value: selectedSubject.isEmpty ? null : selectedSubject,
@@ -393,7 +378,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     ),
                     const SizedBox(height: 12),
                     
-                    // Priority
                     _buildDropdown(
                       label: 'Priority',
                       value: selectedPriority,
@@ -402,7 +386,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     ),
                     const SizedBox(height: 12),
                     
-                    // Status
                     _buildDropdown(
                       label: 'Status',
                       value: selectedStatus,
@@ -411,7 +394,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     ),
                     const SizedBox(height: 12),
                     
-                    // Deadline
                     TextFormField(
                       readOnly: true,
                       decoration: const InputDecoration(
@@ -438,7 +420,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     ),
                     const SizedBox(height: 12),
                     
-                    // Notes
                     TextFormField(
                       controller: notesController,
                       decoration: const InputDecoration(
@@ -613,7 +594,4 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       case 'test':
         return Icons.quiz;
       default:
-        return Icons.folder;
-    }
-  }
-}
+        return Icons.folder
