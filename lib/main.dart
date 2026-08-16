@@ -15,6 +15,8 @@ import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Hive
   await Hive.initFlutter();
   
   // Register adapters
@@ -25,6 +27,7 @@ void main() async {
     Hive.registerAdapter(SessionTypeAdapter());
   }
   
+  // Initialize storage
   await StorageService.init();
   
   runApp(const FocusFlowApp());
@@ -38,7 +41,7 @@ class FocusFlowApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => TimerService()),
-        // Add other providers as needed
+        // Add other providers here as needed
       ],
       child: MaterialApp(
         title: 'FocusFlow',
@@ -115,7 +118,10 @@ class _HomeScreenState extends State<HomeScreen> {
             type: BottomNavigationBarType.fixed,
             selectedItemColor: AppTheme.focusRed,
             unselectedItemColor: AppTheme.textSecondary,
-            selectedLabelStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+            selectedLabelStyle: const TextStyle(
+              fontSize: 10, 
+              fontWeight: FontWeight.w600,
+            ),
             unselectedLabelStyle: const TextStyle(fontSize: 10),
             items: _bottomNavItems,
           ),
