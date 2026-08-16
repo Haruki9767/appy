@@ -16,7 +16,6 @@ class TimerScreen extends StatelessWidget {
         return Scaffold(
           appBar: AppBar(
             title: const Text('FocusFlow'),
-            // FIX: menu button removed (was a dead no-op)
             actions: [
               IconButton(
                 icon: const Icon(Icons.settings),
@@ -48,7 +47,6 @@ class TimerScreen extends StatelessWidget {
               ),
             ),
           ),
-          // FIX: bottom nav active state is now dynamic
           bottomNavigationBar: _buildBottomNav(context, 0),
         );
       },
@@ -87,7 +85,7 @@ class TimerScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: isSelected ? color.withValues(alpha: 0.25) : Colors.grey.withValues(alpha: 0.08),
+                color: isSelected ? color.withOpacity(0.25) : Colors.grey.withOpacity(0.08),
                 blurRadius: isSelected ? 12 : 4,
                 offset: const Offset(0, 4),
               ),
@@ -98,7 +96,6 @@ class TimerScreen extends StatelessWidget {
             children: [
               Text(type.emoji, style: const TextStyle(fontSize: 28)),
               const SizedBox(height: 4),
-              // FIX: use displayName instead of .name to get "Focus" not "focus"
               Text(
                 type.displayName.split(' ')[0],
                 style: TextStyle(
@@ -160,19 +157,17 @@ class TimerScreen extends StatelessWidget {
   }
 
   Widget _buildTodayStats(TimerService t) {
-    // FIX: minutes are derived from actual session data via storage, not just
-    // completedPomodoros * 25 (which ignores actual session lengths)
     final todaySessions = StorageService.getTodaySessions();
     final todayMins = todaySessions
-        .where((s) => s.type == SessionType.focus && s.completed)
-        .fold<int>(0, (sum, s) => sum + s.durationSeconds ~/ 60);
+        .where((s) => s.type == 'focus' && s.completed)
+        .fold<int>(0, (sum, s) => sum + s.durationMinutes);  // ✅ FIXED
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.grey.withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -181,7 +176,6 @@ class TimerScreen extends StatelessWidget {
           _divider(),
           _statItem('⏱️', '$todayMins', 'Minutes'),
           _divider(),
-          // FIX: streaks is now based on every 4 completed pomodoros this session
           _statItem('🔥', t.completedPomodoros >= 4 ? '${t.completedPomodoros ~/ 4}' : '0', 'Streaks'),
         ],
       ),
@@ -195,9 +189,8 @@ class TimerScreen extends StatelessWidget {
     Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
   ]);
 
-  Widget _divider() => Container(width: 1, height: 40, color: Colors.grey.withValues(alpha: 0.15));
+  Widget _divider() => Container(width: 1, height: 40, color: Colors.grey.withOpacity(0.15));
 
-  // FIX: active index is passed in so each screen can highlight its own tab
   Widget _buildBottomNav(BuildContext context, int activeIndex) {
     final items = [
       (Icons.timer, 'Timer', () {}),
@@ -207,7 +200,7 @@ class TimerScreen extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.grey.withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, -2))],
+        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, -2))],
       ),
       child: SafeArea(
         child: Padding(
@@ -256,18 +249,18 @@ class TimerScreen extends StatelessWidget {
   }
 
   void _saveCompletedSession(TimerService t) async {
-    // FIX: use actual sessionStartTime tracked by TimerService
     final start = t.sessionStartTime ?? DateTime.now().subtract(Duration(seconds: t.totalSeconds));
     final end = DateTime.now();
     final actualSecs = end.difference(start).inSeconds;
 
     final session = PomodoroSession(
       id: '${DateTime.now().millisecondsSinceEpoch}_${t.currentType.name}',
+      date: _dateKey(DateTime.now()),
+      type: t.currentType.name,
+      durationMinutes: (actualSecs / 60).ceil(),  // ✅ FIXED
+      completed: true,
       startTime: start,
       endTime: end,
-      type: t.currentType,
-      completed: true,
-      durationSeconds: actualSecs, // FIX: actual elapsed, not total duration
     );
 
     try {
@@ -277,6 +270,9 @@ class TimerScreen extends StatelessWidget {
     }
   }
 
+  String _dateKey(DateTime dt) =>
+      '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+
   IconData _mainIcon(TimerService t) {
     if (t.isRunning) return Icons.pause;
     if (t.isPaused) return Icons.play_arrow;
@@ -284,7 +280,6 @@ class TimerScreen extends StatelessWidget {
     return Icons.play_arrow;
   }
 
-  // FIX: use displayName so button reads "Start Focus" not "Start focus"
   String _mainLabel(TimerService t) {
     if (t.isRunning) return 'Pause';
     if (t.isPaused) return 'Resume';
@@ -292,15 +287,57 @@ class TimerScreen extends StatelessWidget {
     return 'Start ${t.currentType.displayName}';
   }
 
-  Color _colorForType(SessionType type) => switch (type) {
-    SessionType.focus      => AppTheme.focusRed,
-    SessionType.shortBreak => AppTheme.breakGreen,
-    SessionType.longBreak  => AppTheme.longBreakPurple,
-  };
+  Color _colorForType(SessionType type) {
+    switch (type) {
+      case SessionType.focus:
+        return AppTheme.focusRed;
+      case SessionType.shortBreak:
+        return AppTheme.breakGreen;
+      case SessionType.longBreak:
+        return AppTheme.longBreakPurple;
+      case SessionType.stopwatch:
+        return AppTheme.warningYellow;
+      case SessionType.countdown:
+        return AppTheme.errorRed;
+      case SessionType.candle:
+        return const Color(0xFFFF9F1C);
+      case SessionType.ice:
+        return const Color(0xFF4FC3F7);
+    }
+  }
 
-  LinearGradient _gradientForType(SessionType type) => switch (type) {
-    SessionType.focus      => AppTheme.getFocusGradient(),
-    SessionType.shortBreak => AppTheme.getBreakGradient(),
-    SessionType.longBreak  => AppTheme.getLongBreakGradient(),
-  };
+  LinearGradient _gradientForType(SessionType type) {
+    switch (type) {
+      case SessionType.focus:
+        return AppTheme.getFocusGradient();
+      case SessionType.shortBreak:
+        return AppTheme.getBreakGradient();
+      case SessionType.longBreak:
+        return AppTheme.getLongBreakGradient();
+      case SessionType.stopwatch:
+        return const LinearGradient(
+          colors: [Color(0xFFF59E0B), Color(0xFFFBBF24)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case SessionType.countdown:
+        return const LinearGradient(
+          colors: [Color(0xFFEF4444), Color(0xFFF87171)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case SessionType.candle:
+        return const LinearGradient(
+          colors: [Color(0xFFFF9F1C), Color(0xFFFFB347)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case SessionType.ice:
+        return const LinearGradient(
+          colors: [Color(0xFF4FC3F7), Color(0xFF81D4FA)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+    }
+  }
 }
