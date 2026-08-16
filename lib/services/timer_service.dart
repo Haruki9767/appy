@@ -1,146 +1,81 @@
-import 'dart:async';
-import 'package:flutter/foundation.dart';
 import '../models/pomodoro_session.dart';
+import 'storage_service.dart';
 
-enum TimerState { idle, running, paused, completed }
-
-class TimerService extends ChangeNotifier {
-  TimerState _state = TimerState.idle;
-  SessionType _currentType = SessionType.focus;
-  int _remainingSeconds = SessionType.focus.defaultDuration;
-  int _totalSeconds = SessionType.focus.defaultDuration;
-  int _completedPomodoros = 0;
-  DateTime? _sessionStartTime; // FIX: track actual start time
-  Timer? _timer;
-
-  // Getters
-  TimerState get state => _state;
-  SessionType get currentType => _currentType;
-  int get remainingSeconds => _remainingSeconds;
-  int get totalSeconds => _totalSeconds;
-  int get completedPomodoros => _completedPomodoros;
-  DateTime? get sessionStartTime => _sessionStartTime;
-
-  // FIX: clamp to [0,1] to prevent NaN/Infinity crashing CircularTimer
-  double get progress =>
-      _totalSeconds == 0 ? 0.0 : (1 - (_remainingSeconds / _totalSeconds)).clamp(0.0, 1.0);
-
-  String get formattedTime {
-    final m = _remainingSeconds ~/ 60;
-    final s = _remainingSeconds % 60;
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+class StatisticsService {
+  static Map<String, dynamic> getTodayStats() {
+    final sessions = StorageService.getTodaySessions();
+    return _summarize(sessions);
   }
 
-  bool get isRunning => _state == TimerState.running;
-  bool get isPaused => _state == TimerState.paused;
-  bool get isIdle => _state == TimerState.idle;
+  static Map<String, dynamic> getWeekStats() {
+    final now = DateTime.now();
+    // Start of current Monday
+    final weekStart = DateTime(now.year, now.month, now.day)
+        .subtract(Duration(days: now.weekday - 1));
+    final weekEnd = weekStart.add(const Duration(days: 7));
+    final sessions = StorageService.getSessionsInRange(weekStart, weekEnd);
+    final summary = _summarize(sessions);
 
-  void start() {
-    if (_state == TimerState.running) return;
-    // FIX: always cancel existing timer before creating a new one
-    _timer?.cancel();
-    _sessionStartTime ??= DateTime.now(); // only set if not already set (resume case)
-    _state = TimerState.running;
-    notifyListeners();
+    final focusCount = summary['focusSessions'] as int;
+    // FIX: dailyAverage is a double, not a String, so callers can do arithmetic
+    summary['dailyAverage'] = focusCount > 0
+        ? double.parse((focusCount / 7).toStringAsFixed(1))
+        : 0.0;
+    return summary;
+  }
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_remainingSeconds > 0) {
-        _remainingSeconds--;
-        notifyListeners();
-      } else {
-        _complete();
-      }
+  static Map<String, dynamic> getTotalStats() {
+    final sessions = StorageService.getAllSessions();
+    final summary = _summarize(sessions);
+    final totalSecs = (summary['totalFocusSeconds'] as int);
+    summary['totalFocusHours'] = (totalSecs / 3600).round();
+    return summary;
+  }
+
+  static List<Map<String, dynamic>> getLast7DaysData() {
+    final now = DateTime.now();
+    return List.generate(7, (i) {
+      final date = now.subtract(Duration(days: 6 - i));
+      final dayStart = DateTime(date.year, date.month, date.day);
+      final dayEnd = dayStart.add(const Duration(days: 1));
+      final sessions = StorageService.getSessionsInRange(dayStart, dayEnd);
+      final focusCount = sessions
+          .where((s) => s.type == SessionType.focus && s.completed)
+          .length;
+      return {
+        'date': date,
+        'dayName': _dayName(date.weekday),
+        'focusSessions': focusCount,
+      };
     });
   }
 
-  void pause() {
-    if (_state != TimerState.running) return;
-    _timer?.cancel();
-    _state = TimerState.paused;
-    notifyListeners();
-  }
+  // FIX: single-pass summary instead of iterating sessions 3 times
+  static Map<String, dynamic> _summarize(List<PomodoroSession> sessions) {
+    int focusCount = 0, focusSecs = 0, breakCount = 0, totalCompleted = 0;
 
-  void resume() {
-    if (_state != TimerState.paused) return;
-    // FIX: don't reset _sessionStartTime on resume
-    start();
-  }
-
-  void stop() {
-    _timer?.cancel();
-    _remainingSeconds = _totalSeconds;
-    _state = TimerState.idle;
-    _sessionStartTime = null;
-    notifyListeners();
-  }
-
-  void _complete() {
-    _timer?.cancel();
-    _state = TimerState.completed;
-    // NOTE: do NOT increment here — caller (TimerScreen) saves then calls continueToNext
-    // which calls _nextSession, which increments. Keeps count in sync with skip().
-    notifyListeners();
-  }
-
-  // FIX: skip now increments pomodoro count consistently with _complete path
-  void skip() {
-    _timer?.cancel();
-    if (_currentType == SessionType.focus) {
-      _completedPomodoros++;
-    }
-    _sessionStartTime = null;
-    _nextSession();
-  }
-
-  void _nextSession() {
-    if (_currentType == SessionType.focus) {
-      if (_completedPomodoros > 0 && _completedPomodoros % 4 == 0) {
-        _currentType = SessionType.longBreak;
+    for (final s in sessions) {
+      if (!s.completed) continue;
+      totalCompleted++;
+      if (s.type == SessionType.focus) {
+        focusCount++;
+        focusSecs += s.durationSeconds;
       } else {
-        _currentType = SessionType.shortBreak;
+        breakCount++;
       }
-    } else {
-      _currentType = SessionType.focus;
     }
-    _totalSeconds = _currentType.defaultDuration;
-    _remainingSeconds = _totalSeconds;
-    _state = TimerState.idle;
-    _sessionStartTime = null;
-    notifyListeners();
+
+    return {
+      'focusSessions': focusCount,
+      'totalFocusMinutes': (focusSecs / 60).round(),
+      'totalFocusSeconds': focusSecs,
+      'breakSessions': breakCount,
+      'totalSessions': totalCompleted,
+    };
   }
 
-  void switchType(SessionType type) {
-    if (_state == TimerState.running) return;
-    _timer?.cancel();
-    _currentType = type;
-    _totalSeconds = type.defaultDuration;
-    _remainingSeconds = _totalSeconds;
-    _state = TimerState.idle;
-    _sessionStartTime = null;
-    notifyListeners();
-  }
-
-  // Called from TimerScreen after saving the completed session
-  void continueToNext() {
-    if (_currentType == SessionType.focus) {
-      _completedPomodoros++;
-    }
-    _nextSession();
-  }
-
-  // FIX: call this on app start to reset daily count if date has changed
-  void resetDailyStatsIfNeeded(String lastResetDate) {
-    final today =
-        '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}';
-    if (lastResetDate != today) {
-      _completedPomodoros = 0;
-      notifyListeners();
-    }
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+  static String _dayName(int weekday) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days[(weekday - 1).clamp(0, 6)];
   }
 }
