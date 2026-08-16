@@ -1,61 +1,77 @@
 import 'package:hive/hive.dart';
+import 'package:uuid/uuid.dart';
 
 part 'pomodoro_session.g.dart';
 
 @HiveType(typeId: 0)
-class PomodoroSession extends HiveObject {
+class PomodoroSession {
   @HiveField(0)
   final String id;
-
+  
   @HiveField(1)
-  final DateTime startTime;
-
+  final String date;
+  
   @HiveField(2)
-  final DateTime? endTime;
-
+  final String type; // focus, shortBreak, longBreak, stopwatch, countdown, candle, ice
+  
   @HiveField(3)
-  final SessionType type;
-
+  final int durationMinutes;
+  
   @HiveField(4)
   final bool completed;
-
+  
   @HiveField(5)
-  final int durationSeconds;
-
-  @HiveField(6)
   final String? note;
+  
+  @HiveField(6)
+  final String startTime;
+  
+  @HiveField(7)
+  final String? endTime;
+  
+  @HiveField(8)  // ✅ ADD THIS
+  final String? subject;
+  
+  @HiveField(9)  // ✅ ADD THIS
+  final List<String> tags;
+  
+  @HiveField(10)  // ✅ ADD THIS
+  final String? projectId;
 
   PomodoroSession({
-    required this.id,
+    String? id,
+    required this.date,
+    required this.type,
+    required this.durationMinutes,
+    required this.completed,
+    this.note,
     required this.startTime,
     this.endTime,
-    required this.type,
-    required this.completed,
-    required this.durationSeconds,
-    this.note,
-  });
-
-  // Computed — don't rely on stored durationSeconds for elapsed time
-  Duration get duration => Duration(seconds: durationSeconds);
-
-  // Consistency helper
-  bool get isConsistent => completed == (endTime != null);
+    this.subject,
+    this.tags = const [],
+    this.projectId,
+  }) : id = id ?? const Uuid().v4();
 }
 
 @HiveType(typeId: 1)
 enum SessionType {
   @HiveField(0)
   focus,
-
   @HiveField(1)
   shortBreak,
-
   @HiveField(2)
   longBreak,
+  @HiveField(3)
+  stopwatch,
+  @HiveField(4)
+  countdown,
+  @HiveField(5)
+  candle,
+  @HiveField(6)
+  ice,
 }
 
 extension SessionTypeExtension on SessionType {
-  // Renamed from 'name' to avoid shadowing Dart's built-in enum .name getter
   String get displayName {
     switch (this) {
       case SessionType.focus:
@@ -64,6 +80,14 @@ extension SessionTypeExtension on SessionType {
         return 'Short Break';
       case SessionType.longBreak:
         return 'Long Break';
+      case SessionType.stopwatch:
+        return 'Stopwatch';
+      case SessionType.countdown:
+        return 'Countdown';
+      case SessionType.candle:
+        return 'Burning Candle';
+      case SessionType.ice:
+        return 'Melting Ice';
     }
   }
 
@@ -74,7 +98,15 @@ extension SessionTypeExtension on SessionType {
       case SessionType.shortBreak:
         return '☕';
       case SessionType.longBreak:
-        return '🌿'; // Fixed: was 🎯 which looks like another focus icon
+        return '🌿';
+      case SessionType.stopwatch:
+        return '⏱️';
+      case SessionType.countdown:
+        return '⏳';
+      case SessionType.candle:
+        return '🕯️';
+      case SessionType.ice:
+        return '🧊';
     }
   }
 
@@ -86,6 +118,14 @@ extension SessionTypeExtension on SessionType {
         return 5 * 60;
       case SessionType.longBreak:
         return 15 * 60;
+      case SessionType.stopwatch:
+        return 25 * 60;
+      case SessionType.countdown:
+        return 25 * 60;
+      case SessionType.candle:
+        return 25 * 60;
+      case SessionType.ice:
+        return 25 * 60;
     }
   }
 }
