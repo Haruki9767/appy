@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/storage_service.dart';
 import '../services/timer_service.dart';
 import '../theme/app_theme.dart';
-
+import '../models/pomodoro_session.dart';
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
