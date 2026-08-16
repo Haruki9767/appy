@@ -36,7 +36,6 @@ class StorageService {
     try {
       await Hive.initFlutter();
 
-      // Register adapters
       if (!Hive.isAdapterRegistered(0)) {
         Hive.registerAdapter(PomodoroSessionAdapter());
       }
@@ -66,14 +65,13 @@ class StorageService {
   static List<PomodoroSession> getTodaySessions() {
     final today = _dateKey(DateTime.now());
     return _box.values
-        .where((s) => _dateKey(DateTime.parse(s.startTime)) == today)
+        .where((s) => _dateKey(s.startTime) == today)  // ✅ FIXED: DateTime
         .toList();
   }
 
   static List<PomodoroSession> getSessionsInRange(DateTime start, DateTime end) {
     return _box.values.where((s) {
-      final sessionDate = DateTime.parse(s.startTime);
-      return !sessionDate.isBefore(start) && sessionDate.isBefore(end);
+      return !s.startTime.isBefore(start) && s.startTime.isBefore(end);  // ✅ FIXED: DateTime
     }).toList();
   }
 
