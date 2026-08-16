@@ -6,9 +6,9 @@ import 'services/storage_service.dart';
 import 'services/timer_service.dart';
 import 'theme/app_theme.dart';
 
-// Import screens with unique names to avoid conflicts
+// Import screens
 import 'screens/timer_screen.dart';
-import 'screens/statistics_screen.dart' as stats;
+import 'screens/statistics_screen.dart';
 import 'screens/achievements_screen.dart';
 import 'screens/projects_screen.dart';
 import 'screens/goals_screen.dart';
@@ -48,7 +48,7 @@ class FocusFlowApp extends StatelessWidget {
         initialRoute: '/',
         routes: {
           '/': (context) => const HomeScreen(),
-          '/statistics': (context) => const stats.StatisticsScreen(),
+          '/statistics': (context) => const StatisticsScreen(),
           '/achievements': (context) => const AchievementsScreen(),
           '/projects': (context) => const ProjectsScreen(),
           '/goals': (context) => const GoalsScreen(),
@@ -72,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
   
   final List<Widget> _screens = const [
     TimerScreen(),
-    stats.StatisticsScreen(),
+    StatisticsScreen(),
     AchievementsScreen(),
     ProjectsScreen(),
     GoalsScreen(),
