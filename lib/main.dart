@@ -16,10 +16,8 @@ import 'screens/settings_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Hive
   await Hive.initFlutter();
   
-  // Register adapters
   if (!Hive.isAdapterRegistered(0)) {
     Hive.registerAdapter(PomodoroSessionAdapter());
   }
@@ -27,7 +25,6 @@ void main() async {
     Hive.registerAdapter(SessionTypeAdapter());
   }
   
-  // Initialize storage
   await StorageService.init();
   
   runApp(const FocusFlowApp());
@@ -41,7 +38,6 @@ class FocusFlowApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => TimerService()),
-        // Add other providers here as needed
       ],
       child: MaterialApp(
         title: 'FocusFlow',
