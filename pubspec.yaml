@@ -23,7 +23,7 @@ dependencies:
   shared_preferences: ^2.2.3  # ✅ fine
 
   # Charts
-  fl_chart: ^1.2.0   # ← was ^0.66.0 — this is TWO major versions behind!
+  fl_chart: ^1.1.0   # ← was ^0.66.0 — this is TWO major versions behind!
                       # 1.x requires Dart >=3.6, has breaking API changes
 
   # Utilities
