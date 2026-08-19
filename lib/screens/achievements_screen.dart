@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../services/storage_service.dart';
 import '../services/statistics_service.dart';
@@ -14,8 +13,11 @@ class AchievementsScreen extends StatefulWidget {
   State<AchievementsScreen> createState() => _AchievementsScreenState();
 }
 
-class _AchievementsScreenState extends State<AchievementsScreen> with SingleTickerProviderStateMixin {
+class _AchievementsScreenState extends State<AchievementsScreen>
+    with SingleTickerProviderStateMixin {
   List<Achievement> _achievements = [];
+  // Map of achievementId -> ISO unlock timestamp (real stored date, not DateTime.now())
+  Map<String, String> _unlockedAtMap = {};
   bool _isLoading = true;
   late AnimationController _animationController;
 
@@ -37,29 +39,51 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
 
   Future<void> _loadAchievements() async {
     setState(() => _isLoading = true);
-    
+
     final allAchievements = AchievementService.getAllAchievements();
+
+    // Load the stored list of unlocked IDs
     final unlockedIds = await StorageService.getUnlockedAchievements();
-    
+
+    // Load stored unlock timestamps (key: "unlockedAt_<id>")
+    // FIX: read the real persisted timestamp instead of overwriting with DateTime.now()
+    final Map<String, String> unlockedAtMap = {};
+    for (final id in unlockedIds) {
+      final stored = StorageService.getSetting<String>('unlockedAt_$id', '');
+      if (stored.isNotEmpty) {
+        unlockedAtMap[id] = stored;
+      } else {
+        // First time we see this id without a timestamp: stamp it now and save
+        final now = DateTime.now().toIso8601String();
+        await StorageService.setSetting('unlockedAt_$id', now);
+        unlockedAtMap[id] = now;
+      }
+    }
+
     setState(() {
+      _unlockedAtMap = unlockedAtMap;
       _achievements = allAchievements.map((a) {
         final isUnlocked = unlockedIds.contains(a.id);
         return a.copyWith(
           unlocked: isUnlocked,
-          unlockedAt: isUnlocked ? DateTime.now().toIso8601String() : null,
+          // FIX: use the persisted timestamp, never DateTime.now() on every rebuild
+          unlockedAt: isUnlocked ? unlockedAtMap[a.id] : null,
         );
       }).toList();
       _isLoading = false;
     });
-    
+
     _animationController.forward();
   }
 
   @override
   Widget build(BuildContext context) {
-    final totalStats = StatisticsService.getTotalStats();
-    final totalHours = (totalStats['totalFocusSeconds'] as int) / 3600;
     final unlockedCount = _achievements.where((a) => a.unlocked).length;
+    final total = _achievements.length;
+
+    // FIX: guard against empty list to avoid division by zero / NaN
+    final progressValue = total == 0 ? 0.0 : (unlockedCount / total).clamp(0.0, 1.0);
+    final progressPercent = total == 0 ? 0 : (unlockedCount / total * 100).round();
 
     return Scaffold(
       appBar: AppBar(
@@ -68,6 +92,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
       ),
       body: Column(
         children: [
+          // Progress header card
           Container(
             padding: const EdgeInsets.all(20),
             margin: const EdgeInsets.all(16),
@@ -89,7 +114,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
                       ),
                     ),
                     Text(
-                      '$unlockedCount / ${_achievements.length}',
+                      '$unlockedCount / $total',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -102,7 +127,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
-                    value: unlockedCount / _achievements.length,
+                    value: progressValue,
                     backgroundColor: Colors.white.withOpacity(0.3),
                     valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                     minHeight: 8,
@@ -110,16 +135,13 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${(unlockedCount / _achievements.length * 100).round()}% Complete',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
+                  '$progressPercent% Complete',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ],
             ),
           ),
-          
+
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -156,22 +178,26 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
 
   Widget _buildAchievementCard(Achievement achievement) {
     final isUnlocked = achievement.unlocked;
-    
+
     return Container(
       decoration: BoxDecoration(
         color: isUnlocked ? Colors.white : Colors.white.withOpacity(0.5),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isUnlocked ? AppTheme.focusRed.withOpacity(0.3) : Colors.grey.withOpacity(0.1),
+          color: isUnlocked
+              ? AppTheme.focusRed.withOpacity(0.3)
+              : Colors.grey.withOpacity(0.1),
           width: 2,
         ),
-        boxShadow: isUnlocked ? [
-          BoxShadow(
-            color: AppTheme.focusRed.withOpacity(0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ] : null,
+        boxShadow: isUnlocked
+            ? [
+                BoxShadow(
+                  color: AppTheme.focusRed.withOpacity(0.15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
       ),
       child: Stack(
         children: [
@@ -184,8 +210,8 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: isUnlocked 
-                        ? AppTheme.focusRed.withOpacity(0.1) 
+                    color: isUnlocked
+                        ? AppTheme.focusRed.withOpacity(0.1)
                         : Colors.grey.withOpacity(0.05),
                     shape: BoxShape.circle,
                   ),
@@ -194,7 +220,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
                       achievement.icon,
                       style: TextStyle(
                         fontSize: isUnlocked ? 28 : 20,
-                        color: isUnlocked ? Colors.black : Colors.grey.withOpacity(0.3),  // ✅ FIXED
                       ),
                     ),
                   ),
@@ -214,49 +239,55 @@ class _AchievementsScreenState extends State<AchievementsScreen> with SingleTick
                   achievement.description,
                   style: TextStyle(
                     fontSize: 10,
-                    color: isUnlocked ? AppTheme.textSecondary : AppTheme.textSecondary.withOpacity(0.5),
+                    color: isUnlocked
+                        ? AppTheme.textSecondary
+                        : AppTheme.textSecondary.withOpacity(0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
+                // Show real unlock date
+                if (isUnlocked && achievement.unlockedAt != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatUnlockDate(achievement.unlockedAt!),
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: AppTheme.successGreen.withOpacity(0.8),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ],
             ),
           ),
-          if (!isUnlocked)
-            Positioned(
-              right: 8,
-              top: 8,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: AppTheme.textSecondary,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.lock,
-                  size: 14,
-                  color: Colors.white,
-                ),
+          // Lock / check badge
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: isUnlocked ? AppTheme.successGreen : AppTheme.textSecondary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isUnlocked ? Icons.check : Icons.lock,
+                size: 14,
+                color: Colors.white,
               ),
             ),
-          if (isUnlocked)
-            Positioned(
-              right: 8,
-              top: 8,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: AppTheme.successGreen,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check,
-                  size: 14,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+          ),
         ],
       ),
     );
+  }
+
+  String _formatUnlockDate(String iso) {
+    try {
+      final dt = DateTime.parse(iso);
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (_) {
+      return '';
+    }
   }
 }
