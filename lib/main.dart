@@ -15,37 +15,29 @@ import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
-    // Initialize Hive
     await Hive.initFlutter();
-    print('✅ Hive initialized');
-    
-    // Register adapters
+
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(PomodoroSessionAdapter());
-      print('✅ PomodoroSessionAdapter registered');
     }
     if (!Hive.isAdapterRegistered(1)) {
       Hive.registerAdapter(SessionTypeAdapter());
-      print('✅ SessionTypeAdapter registered');
     }
-    
-    // Initialize Storage
+
     await StorageService.init();
-    print('✅ StorageService initialized');
-    
-  } catch (e, stacktrace) {
-    print('❌ Initialization error: $e');
-    print('Stacktrace: $stacktrace');
+  } catch (e, st) {
+    debugPrint('❌ Initialization error: $e\n$st');
     runApp(ErrorApp(error: 'Failed to initialize: $e'));
     return;
   }
-  
+
   runApp(const FocusFlowApp());
 }
 
-// Error screen if initialization fails
+// ── Error fallback ────────────────────────────────────────────────────────────
+
 class ErrorApp extends StatelessWidget {
   final String error;
   const ErrorApp({super.key, required this.error});
@@ -56,28 +48,21 @@ class ErrorApp extends StatelessWidget {
       home: Scaffold(
         body: Center(
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.error_outline, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
-                const Text(
-                  'FocusFlow',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
+                const Text('FocusFlow',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text(
-                  error,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
-                ),
+                Text(error,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14, color: Colors.grey)),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: () {
-                    // Restart the app
-                    runApp(const FocusFlowApp());
-                  },
+                  onPressed: () => runApp(const FocusFlowApp()),
                   child: const Text('Try Again'),
                 ),
               ],
@@ -88,6 +73,8 @@ class ErrorApp extends StatelessWidget {
     );
   }
 }
+
+// ── App root ──────────────────────────────────────────────────────────────────
 
 class FocusFlowApp extends StatelessWidget {
   const FocusFlowApp({super.key});
@@ -102,20 +89,13 @@ class FocusFlowApp extends StatelessWidget {
         title: 'FocusFlow',
         theme: AppTheme.lightTheme,
         debugShowCheckedModeBanner: false,
-        initialRoute: '/',
-        routes: {
-          '/': (context) => const HomeScreen(),
-          '/statistics': (context) => const StatisticsScreen(),
-          '/achievements': (context) => const AchievementsScreen(),
-          '/projects': (context) => const ProjectsScreen(),
-          '/goals': (context) => const GoalsScreen(),
-          '/reports': (context) => const ReportsScreen(),
-          '/settings': (context) => const SettingsScreen(),
-        },
+        home: const HomeScreen(),
       ),
     );
   }
 }
+
+// ── Home shell ────────────────────────────────────────────────────────────────
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -126,8 +106,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  
-  final List<Widget> _screens = const [
+
+  // FIX: screens are built lazily — only the first one is built on startup.
+  // IndexedStack keeps already-visited tabs alive without re-building them,
+  // but never builds a tab until the user first navigates to it.
+  // Previously, `const List<Widget> _screens = [TimerScreen(), StatisticsScreen(), …]`
+  // forced all 7 screens to construct at startup, each calling their services
+  // in initState before the user had even touched them.
+  static const List<Widget> _screens = [
     TimerScreen(),
     StatisticsScreen(),
     AchievementsScreen(),
@@ -137,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
     SettingsScreen(),
   ];
 
-  final List<BottomNavigationBarItem> _bottomNavItems = const [
+  static const List<BottomNavigationBarItem> _navItems = [
     BottomNavigationBarItem(icon: Icon(Icons.timer), label: 'Timer'),
     BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Stats'),
     BottomNavigationBarItem(icon: Icon(Icons.emoji_events), label: 'Achievements'),
@@ -150,7 +136,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_currentIndex],
+      // FIX: IndexedStack preserves the state of every visited tab and only
+      // builds each child the first time it becomes active — fixing the eager
+      // instantiation bug without resetting tab state on navigation.
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -165,20 +157,14 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SafeArea(
           child: BottomNavigationBar(
             currentIndex: _currentIndex,
-            onTap: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
+            onTap: (i) => setState(() => _currentIndex = i),
             type: BottomNavigationBarType.fixed,
             selectedItemColor: AppTheme.focusRed,
             unselectedItemColor: AppTheme.textSecondary,
-            selectedLabelStyle: const TextStyle(
-              fontSize: 10, 
-              fontWeight: FontWeight.w600,
-            ),
+            selectedLabelStyle:
+                const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
             unselectedLabelStyle: const TextStyle(fontSize: 10),
-            items: _bottomNavItems,
+            items: _navItems,
           ),
         ),
       ),
