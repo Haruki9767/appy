@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.6.0 <4.0.0"  # ← was >=3.4.0; fl_chart 1.x requires 3.6+
+  sdk: ">=3.6.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -12,32 +12,27 @@ dependencies:
 
   # UI & Animation
   cupertino_icons: ^1.0.8
-  flutter_staggered_animations: ^1.1.1  # ✅ latest, no change needed
+  flutter_staggered_animations: ^1.1.1
 
   # State Management
-  provider: ^6.1.1  # ✅ fine
+  provider: ^6.1.1
 
   # Local Storage
-  hive: ^2.2.3        # ✅ latest stable (unmaintained but still works)
-  hive_flutter: ^1.1.0  # ✅ latest stable
-  shared_preferences: ^2.2.3  # ✅ fine
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  shared_preferences: ^2.2.3
 
   # Charts
-  fl_chart: ^1.1.0   # ← was ^0.66.0 — this is TWO major versions behind!
-                      # 1.x requires Dart >=3.6, has breaking API changes
+  fl_chart: 1.1.0
 
   # Utilities
-  intl: ^0.19.0      # ✅ fine
-  uuid: ^4.3.3       # ✅ fine
-  path_provider: ^2.1.2  # ✅ fine
+  intl: ^0.19.0
+  uuid: ^4.3.3
+  path_provider: ^2.1.2
 
   # File Operations
-  file_picker: ^9.0.0   # ← was ^6.1.1; v12 is latest but has MAJOR breaking
-                         # changes (federated arch, FilePickerResult removed).
-                         # ^9.0.0 is the safest upgrade with minimal breakage.
-  share_plus: ^13.0.0   # ← was ^7.2.2; current latest is 13.x.
-                         # v10+ changed to SharePlus.instance.share(ShareParams())
-                         # — the old Share.shareXFiles() API is gone.
+  file_picker: ^8.1.4
+  share_plus: ^10.1.4
 
 dev_dependencies:
   flutter_test:
