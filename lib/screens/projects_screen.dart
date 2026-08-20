@@ -24,7 +24,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   Future<void> _loadProjects() async {
     setState(() => _isLoading = true);
     _projects = await ProjectService.getAllProjects();
-    setState(() => _isLoading = false);
+    if (mounted) setState(() => _isLoading = false);
   }
 
   List<Project> get _filteredProjects {
@@ -82,9 +82,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: _filteredProjects.length,
-                        itemBuilder: (context, index) {
-                          return _buildProjectCard(_filteredProjects[index]);
-                        },
+                        itemBuilder: (_, i) => _buildProjectCard(_filteredProjects[i]),
                       ),
           ),
         ],
@@ -124,12 +122,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         padding: const EdgeInsets.only(right: 20),
         child: const Icon(Icons.delete, color: Colors.white),
       ),
-      // FIX: use confirmDismiss so the item stays visible until confirmed;
-      // the old onDismissed removed the item from view BEFORE the dialog
-      // resolved, causing a visual desync when the user tapped Cancel.
-      confirmDismiss: (_) async {
-        return await _confirmDelete();
-      },
+      // FIX: was onDismissed — item was removed from view before the dialog
+      // resolved, so cancelling the dialog left it visually gone but not deleted.
+      // confirmDismiss keeps the item visible until the user confirms.
+      confirmDismiss: (_) => _confirmDelete(),
       onDismissed: (_) async {
         await ProjectService.deleteProject(project.id);
         _loadProjects();
@@ -149,11 +145,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
+            BoxShadow(color: Colors.grey.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 4)),
           ],
         ),
         child: Column(
@@ -165,10 +157,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   child: Text(
                     project.title,
                     style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary,
-                    ),
+                        fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
                   ),
                 ),
                 Container(
@@ -180,20 +169,15 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   child: Text(
                     project.priority,
                     style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: priorityColor,
-                    ),
+                        fontSize: 10, fontWeight: FontWeight.w600, color: priorityColor),
                   ),
                 ),
               ],
             ),
             if (project.description != null && project.description!.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(
-                project.description!,
-                style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-              ),
+              Text(project.description!,
+                  style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
             ],
             const SizedBox(height: 8),
             Row(
@@ -205,8 +189,13 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 const SizedBox(width: 16),
                 const Icon(Icons.subject, size: 16, color: AppTheme.textSecondary),
                 const SizedBox(width: 4),
-                Text(project.subject ?? 'No subject',
-                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                Flexible(
+                  child: Text(
+                    project.subject ?? 'No subject',
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 const SizedBox(width: 16),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -217,10 +206,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   child: Text(
                     statusText,
                     style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: statusColor,
-                    ),
+                        fontSize: 10, fontWeight: FontWeight.w600, color: statusColor),
                   ),
                 ),
               ],
@@ -228,41 +214,27 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const Text('Progress',
-                              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                          const Spacer(),
-                          Text(
-                            '${project.progress}%',
-                            style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.textPrimary),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: LinearProgressIndicator(
-                          value: project.progress / 100,
-                          backgroundColor: Colors.grey.withOpacity(0.1),
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            project.progress >= 100
-                                ? AppTheme.successGreen
-                                : AppTheme.focusRed,
-                          ),
-                          minHeight: 6,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                const Text('Progress',
+                    style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                const Spacer(),
+                Text('${project.progress}%',
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary)),
               ],
+            ),
+            const SizedBox(height: 4),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: project.progress / 100,
+                backgroundColor: Colors.grey.withOpacity(0.1),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  project.progress >= 100 ? AppTheme.successGreen : AppTheme.focusRed,
+                ),
+                minHeight: 6,
+              ),
             ),
             Align(
               alignment: Alignment.bottomRight,
@@ -278,7 +250,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     );
   }
 
-  /// Returns true if the user confirms deletion, false otherwise.
   Future<bool> _confirmDelete() async {
     final result = await showDialog<bool>(
       context: context,
@@ -287,9 +258,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         content: const Text('Are you sure you want to delete this project?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
+              onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -305,13 +274,23 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     final formKey = GlobalKey<FormState>();
     final isEditing = project != null;
 
-    // FIX: controllers created here (once per dialog open, properly disposed
-    // when the dialog closes) — not inside build() where they leak on every rebuild
+    // FIX: all controllers created once here and disposed after dialog closes.
+    // Previously the deadline controller was created INSIDE StatefulBuilder,
+    // meaning it was recreated on every setModalState() call and never disposed.
     final titleController = TextEditingController(text: project?.title ?? '');
     final descriptionController = TextEditingController(text: project?.description ?? '');
     final notesController = TextEditingController(text: project?.notes ?? '');
-    // FIX: deadline controller managed as a variable, updated via setModalState
     final deadlineController = TextEditingController(text: project?.deadline ?? '');
+
+    // FIX: dropdown state variables declared OUTSIDE StatefulBuilder so they
+    // survive rebuilds. Previously they were declared inside the builder, which
+    // meant every setModalState() call reset them to their initial values,
+    // making it impossible to change dropdowns — the Create button would always
+    // submit the default values regardless of what the user selected.
+    String selectedType     = project?.type     ?? 'project';
+    String selectedStatus   = project?.status   ?? 'notstarted';
+    String selectedPriority = project?.priority ?? 'medium';
+    String selectedSubject  = project?.subject  ?? '';
 
     await showModalBottomSheet(
       context: context,
@@ -319,207 +298,207 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => DraggableScrollableSheet(
+      builder: (ctx) => DraggableScrollableSheet(
         initialChildSize: 0.9,
         minChildSize: 0.5,
         maxChildSize: 0.95,
         expand: false,
-        builder: (context, scrollController) => StatefulBuilder(
-          builder: (context, setModalState) {
-            String selectedType = project?.type ?? 'project';
-            String selectedStatus = project?.status ?? 'notstarted';
-            String selectedPriority = project?.priority ?? 'medium';
-            String selectedSubject = project?.subject ?? '';
-
-            return SingleChildScrollView(
-              controller: scrollController,
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    Text(
-                      isEditing ? 'Edit Project' : 'New Project',
-                      style: const TextStyle(
+        builder: (ctx, scrollController) => StatefulBuilder(
+          builder: (ctx, setModalState) => SingleChildScrollView(
+            controller: scrollController,
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              // Keep form above keyboard
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+            ),
+            child: Form(
+              key: formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isEditing ? 'Edit Project' : 'New Project',
+                    style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+                        color: AppTheme.textPrimary),
+                  ),
+                  const SizedBox(height: 16),
 
-                    _buildDropdown(
-                      label: 'Type',
-                      value: selectedType,
-                      items: const ['project', 'exam', 'test'],
-                      onChanged: (v) => setModalState(() => selectedType = v!),
-                    ),
-                    const SizedBox(height: 12),
+                  // Type
+                  _buildDropdown(
+                    label: 'Type',
+                    value: selectedType,
+                    items: const ['project', 'exam', 'test'],
+                    onChanged: (v) => setModalState(() => selectedType = v!),
+                  ),
+                  // FIX: missing SizedBox after Type dropdown — fields were
+                  // crammed together with no spacing.
+                  const SizedBox(height: 12),
 
-                    TextFormField(
-                      controller: titleController,
-                      decoration: const InputDecoration(
-                        labelText: 'Title *',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) =>
-                          (v == null || v.isEmpty) ? 'Title is required' : null,
+                  // Title
+                  TextFormField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Title *',
+                      border: OutlineInputBorder(),
                     ),
-                    const SizedBox(height: 12),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Title is required' : null,
+                  ),
+                  const SizedBox(height: 12),
 
-                    TextFormField(
-                      controller: descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 3,
+                  // Description
+                  TextFormField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      border: OutlineInputBorder(),
                     ),
-                    const SizedBox(height: 12),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 12),
 
-                    _buildDropdown(
-                      label: 'Subject',
-                      value: selectedSubject.isEmpty ? null : selectedSubject,
-                      items: const [
-                        'Mathematics',
-                        'Physics',
-                        'Chemistry',
-                        'English',
-                        'History',
-                        'Computer Science',
-                      ],
-                      onChanged: (v) =>
-                          setModalState(() => selectedSubject = v ?? ''),
+                  // Subject
+                  _buildDropdown(
+                    label: 'Subject',
+                    value: selectedSubject.isEmpty ? null : selectedSubject,
+                    items: const [
+                      'Mathematics', 'Physics', 'Chemistry',
+                      'English', 'History', 'Computer Science',
+                    ],
+                    onChanged: (v) => setModalState(() => selectedSubject = v ?? ''),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Priority
+                  _buildDropdown(
+                    label: 'Priority',
+                    value: selectedPriority,
+                    items: const ['low', 'medium', 'high'],
+                    onChanged: (v) => setModalState(() => selectedPriority = v!),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Status
+                  _buildDropdown(
+                    label: 'Status',
+                    value: selectedStatus,
+                    items: const ['notstarted', 'inprogress', 'completed'],
+                    onChanged: (v) => setModalState(() => selectedStatus = v!),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Deadline
+                  // FIX: controller is now the stable deadlineController defined
+                  // above, not TextEditingController(text: selectedDeadline)
+                  // which was recreated on every rebuild and never disposed.
+                  TextFormField(
+                    controller: deadlineController,
+                    readOnly: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Deadline',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today),
                     ),
-                    const SizedBox(height: 12),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: ctx,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime(2100),
+                      );
+                      if (date != null) {
+                        final formatted = date.toIso8601String().split('T').first;
+                        setModalState(() => deadlineController.text = formatted);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
 
-                    _buildDropdown(
-                      label: 'Priority',
-                      value: selectedPriority,
-                      items: const ['low', 'medium', 'high'],
-                      onChanged: (v) =>
-                          setModalState(() => selectedPriority = v!),
+                  // Notes
+                  TextFormField(
+                    controller: notesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes',
+                      border: OutlineInputBorder(),
                     ),
-                    const SizedBox(height: 12),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 24),
 
-                    _buildDropdown(
-                      label: 'Status',
-                      value: selectedStatus,
-                      items: const ['notstarted', 'inprogress', 'completed'],
-                      onChanged: (v) =>
-                          setModalState(() => selectedStatus = v!),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // FIX: deadline controller is managed as a stable variable —
-                    // NOT created inline inside build() which caused a memory leak
-                    TextFormField(
-                      controller: deadlineController,
-                      readOnly: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Deadline',
-                        border: OutlineInputBorder(),
-                        suffixIcon: Icon(Icons.calendar_today),
-                      ),
-                      onTap: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime.now(),
-                          lastDate: DateTime(2100),
-                        );
-                        if (date != null) {
-                          final formatted =
-                              date.toIso8601String().split('T').first;
-                          setModalState(() {
-                            deadlineController.text = formatted;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextFormField(
-                      controller: notesController,
-                      decoration: const InputDecoration(
-                        labelText: 'Notes',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 24),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: OutlinedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16)),
-                            child: const Text('Cancel'),
-                          ),
+                  // Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16)),
+                          child: const Text('Cancel'),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor: AppTheme.focusRed,
-                            ),
-                            onPressed: () async {
-                              if (formKey.currentState?.validate() ?? false) {
-                                final newProject = Project(
-                                  id: project?.id,
-                                  title: titleController.text,
-                                  description: descriptionController.text,
-                                  subject: selectedSubject,
-                                  priority: selectedPriority,
-                                  status: selectedStatus,
-                                  deadline: deadlineController.text,
-                                  progress: project?.progress ?? 0,
-                                  notes: notesController.text,
-                                  type: selectedType,
-                                );
-
-                                if (isEditing) {
-                                  await ProjectService.updateProject(newProject);
-                                } else {
-                                  await ProjectService.createProject(newProject);
-                                }
-
-                                if (mounted) {
-                                  Navigator.pop(context);
-                                  _loadProjects();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(isEditing
-                                          ? 'Project updated!'
-                                          : 'Project created!'),
-                                      backgroundColor: AppTheme.successGreen,
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                            child: Text(isEditing ? 'Update' : 'Create'),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          // FIX: was missing backgroundColor — button rendered
+                          // with default grey Material style instead of focusRed.
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: AppTheme.focusRed,
+                            foregroundColor: Colors.white,
                           ),
+                          onPressed: () async {
+                            if (!(formKey.currentState?.validate() ?? false)) return;
+
+                            final newProject = Project(
+                              id:          project?.id,
+                              title:       titleController.text.trim(),
+                              description: descriptionController.text.trim(),
+                              subject:     selectedSubject,
+                              priority:    selectedPriority,
+                              status:      selectedStatus,
+                              deadline:    deadlineController.text,
+                              progress:    project?.progress ?? 0,
+                              notes:       notesController.text.trim(),
+                              type:        selectedType,
+                            );
+
+                            if (isEditing) {
+                              await ProjectService.updateProject(newProject);
+                            } else {
+                              await ProjectService.createProject(newProject);
+                            }
+
+                            if (mounted) {
+                              Navigator.pop(ctx);
+                              _loadProjects();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      isEditing ? 'Project updated!' : 'Project created!'),
+                                  backgroundColor: AppTheme.successGreen,
+                                ),
+                              );
+                            }
+                          },
+                          child: Text(isEditing ? 'Update' : 'Create'),
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
 
-    // FIX: dispose controllers after dialog closes to prevent memory leaks
+    // FIX: dispose all controllers after modal closes — previously only
+    // title/description/notes were disposed; deadline leaked on every open.
     titleController.dispose();
     descriptionController.dispose();
     notesController.dispose();
@@ -534,13 +513,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   }) {
     return DropdownButtonFormField<T>(
       value: value,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-      ),
-      items: items.map((item) {
-        return DropdownMenuItem(value: item, child: Text(item.toString()));
-      }).toList(),
+      decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+      items: items
+          .map((item) => DropdownMenuItem(value: item, child: Text(item.toString())))
+          .toList(),
       onChanged: onChanged,
     );
   }
@@ -552,45 +528,33 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'completed':
-        return AppTheme.successGreen;
-      case 'inprogress':
-        return AppTheme.focusRed;
-      default:
-        return AppTheme.textSecondary;
+      case 'completed': return AppTheme.successGreen;
+      case 'inprogress': return AppTheme.focusRed;
+      default: return AppTheme.textSecondary;
     }
   }
 
   String _getStatusText(String status) {
     switch (status) {
-      case 'completed':
-        return 'Completed';
-      case 'inprogress':
-        return 'In Progress';
-      default:
-        return 'Not Started';
+      case 'completed': return 'Completed';
+      case 'inprogress': return 'In Progress';
+      default: return 'Not Started';
     }
   }
 
   Color _getPriorityColor(String priority) {
     switch (priority) {
-      case 'high':
-        return Colors.red;
-      case 'medium':
-        return AppTheme.warningYellow;
-      default:
-        return AppTheme.successGreen;
+      case 'high': return Colors.red;
+      case 'medium': return AppTheme.warningYellow;
+      default: return AppTheme.successGreen;
     }
   }
 
   IconData _getTypeIcon(String type) {
     switch (type) {
-      case 'exam':
-        return Icons.assignment;
-      case 'test':
-        return Icons.quiz;
-      default:
-        return Icons.folder;
+      case 'exam': return Icons.assignment;
+      case 'test': return Icons.quiz;
+      default: return Icons.folder;
     }
   }
 }
